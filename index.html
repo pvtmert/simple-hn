@@ -4,47 +4,65 @@
 	<title>SimpleHN</title>
 </head>
 <body>
-	<button onclick="loadPage('main', { type: 'topstories'})" >top </button>
-	<button onclick="loadPage('main', { type: 'askstories'})" >ask </button>
-	<button onclick="loadPage('main', { type: 'jobstories'})" >jobs</button>
-	<input type=checkbox id=comments onchange="loadPage('main', { comments: this.checked })" />
-	<label for=comments >comments?</label>
-	<button onclick="document.querySelectorAll('details').forEach(item => { item.open = true  })" >  expand</button>
-	<button onclick="document.querySelectorAll('details').forEach(item => { item.open = false })" >collapse</button>
-	<!--input type=checkbox id=expanded onchange="loadPage('main', { expanded: this.checked })" /-->
-	<!--input type=checkbox id=expanded onchange="document.querySelectorAll('details').forEach(item => { item.open = this.checked })" / -->
-	<!--label for=expanded >expanded?</label-->
-	<select onchange="loadPage('main', { max: this.value })" >
-		<option>10</option>
-		<option>25</option>
-		<option>50</option>
-		<option>100</option>
-		<option>200</option>
-		<option>500</option>
-		<option>1000</option>
-		<option>-1</option>
-	</select>
-	<button onclick="STORAGE.clear()">clear cache</button>
-	<code id=counter ></code>
+	<header>
+		<button onclick="loadPage('main', { type: 'topstories'})" >top </button>
+		<button onclick="loadPage('main', { type: 'askstories'})" >ask </button>
+		<button onclick="loadPage('main', { type: 'jobstories'})" >jobs</button>
+		<input type=checkbox id=comments onchange="loadPage('main', { comments: this.checked })" />
+		<label for=comments >comments?</label>
+		<button onclick="document.querySelectorAll('details').forEach(item => { item.open = true  })" >  expand</button>
+		<button onclick="document.querySelectorAll('details').forEach(item => { item.open = false })" >collapse</button>
+		<!--input type=checkbox id=expanded onchange="loadPage('main', { expanded: this.checked })" /-->
+		<!--input type=checkbox id=expanded onchange="document.querySelectorAll('details').forEach(item => { item.open = this.checked })" / -->
+		<!--label for=expanded >expanded?</label-->
+		<select onchange="loadPage('main', { max: this.value })" >
+			<option>10</option>
+			<option>25</option>
+			<option>50</option>
+			<option>100</option>
+			<option>200</option>
+			<option>500</option>
+			<option>1000</option>
+			<option>-1</option>
+		</select>
+		<button onclick="STORAGE.clear()">clear cache</button>
+		<code id=counter ></code>
+	</header>
 	<main></main>
 <script>
 
 	var STORAGE = localStorage
 	let BASEURL = "https://hacker-news.firebaseio.com/v0"
 
+	HTMLElement.prototype.showModal = function() {
+		this.open = true
+		return this.setAttribute("open", "")
+	}
+	HTMLElement.prototype.close = function() {
+		this.open = false
+		return this.removeAttribute("open")
+	}
+
 	function template(json) {
 		let timestamp = new Date(json.time * 1000).toDateString()
 		let comments  = (JSON.parse(STORAGE.COMMENTS) && json.kids) ? (`
 			<details ${JSON.parse(STORAGE.EXPANDED) && "open"} id=${json.id} >
-				<!--summary>loading...</summary-->
+				<summary>Comments</summary>
 			</details>
 		`) : ""
+		let author = (`
+			<u class=author onclick="return loadAuthor(this, '${json.by}', event)"
+				href="https://news.ycombinator.com/user?id=${json.by}">
+				${json.by}<!--summary>${json.by}</summary-->
+				<diyalog >loading...</diyalog>
+			</u>
+		`)
 		switch(json.type) {
 			case "job":
 				return (`
 					<div class=points >${json.score || 0}</div>
 					<a href="${json.url || "#"}" >${json.title || "{notitle}"}</a>
-					<div class=right >${json.by} / ${timestamp}</div>
+					<div class=right >${author} / ${timestamp}</div>
 					<div>${json.text || ""}</div>
 					${comments}
 				`)
@@ -55,7 +73,7 @@
 				`)
 			case "comment":
 				return (`
-					<div class=right >${json.by} / ${timestamp}</div>
+					<div class=right >${author} / ${timestamp}</div>
 					<div>${json.text}</div>
 					${comments}
 				`)
@@ -64,7 +82,7 @@
 				return (`
 					<div class=points >${json.score || 0} / ${json.descendants || 0}</div>
 					<a href="${json.url || "#"}" >${json.title}</a>
-					<div class=right >${json.by} / ${timestamp}</div>
+					<div class=right >${author} / ${timestamp}</div>
 					${comments}
 				`)
 				break
@@ -77,7 +95,52 @@
 	function append(elem, json, recursion) {
 		if(!json) return
 		elem.innerHTML += (`<hr /><div class=${json.type} hn=${json.id} >${template(json)}</div>`)
-		json.kids && setTimeout(() => json.kids.forEach((item, index) => loadItem(elem.querySelector(`[hn="${json.id}"] details`), item, recursion)), 10*recursion)
+		json.kids && setTimeout(() => json.kids.forEach((item, index) =>
+			loadItem(elem.querySelector(`[hn="${json.id}"] details`), item, recursion)),
+		10*recursion)
+	}
+
+	function loadAuthor(elem, id, event) {
+		event.preventDefault()
+		let dialog = elem.querySelector("dialog") || elem.querySelector("details") || elem.querySelector("diyalog")
+		if(!dialog) return
+		if(dialog.open) {
+			dialog.close()
+			return false
+		}
+		fetch(`${BASEURL}/user/${id}.json?print=pretty`)
+			.then(resp => resp.json())
+			.then(user => {
+				let date = new Date(user.created * 1000).toDateString()
+				dialog.innerHTML = (`
+					<div>username: ${user.id}</div>
+					<div>karma: ${user.karma}</div>
+					<div>registered:  ${date}</div>
+					<div>${user.about || " "}</div>
+				`)
+				Object.entries({
+					github:  `https://github.com/${id}`,
+					twitter: `https://twitter.com/${id}`,
+				}).forEach((item, index) => {
+					function success() {
+						dialog.innerHTML += `<br /><a href="${item[1]}" >${item[0]}</a>`
+						return
+					}
+					fetch(item[1], { mode: "no-cors" }).then(resp => {
+						if(resp.ok) return success()
+						throw "lololo"
+					}).catch(error => {
+						let img = document.createElement("img")
+						img.addEventListener("load", success)
+						img.src = (`${item[1]}`)
+						return
+					})
+					return
+				})
+				return user
+			})
+		dialog.showModal()
+		return false
 	}
 
 	function clear(elem) {
@@ -135,6 +198,7 @@
 			new WebSocket(`ws://${location.host}`).onmessage = function(msg) {
 				location.reload()
 			}
+			setTimeout(() => document.querySelector("u").click(), 1111)
 		}
 		setInterval((elem) => {
 			elem.innerHTML = (`article stats: hit:${counter[0]} dl:${counter[1]} cached:${counter[2]}`)
@@ -155,10 +219,73 @@ a {
 
 body {
 	font-family: sans-serif;
+	padding-top: 1em;
+}
+
+header {
+	top: 0;
+	left: 0;
+	right: 0;
+	padding: 0.5em;
+	position: fixed;
+	background: white;
+}
+
+hr {
+	height: 1px;
+	border: none;
+	background: #aaa;
 }
 
 details {
-	margin-left: 2em;
+	padding: 0.5em;
+	margin-left: 1.5em;
+}
+
+details[open] {
+	border-left: 1px solid #aaa;
+}
+
+diyalog {
+	display: block;
+	position: fixed;
+	top: 0px;
+	left: 0px;
+	right: 0px;
+	bottom: 0px;
+	width: -webkit-fit-content;
+	height: -webkit-fit-content;
+	color: black;
+	margin: auto;
+	border-width: initial;
+	border-style: solid;
+	border-color: initial;
+	border-image: initial;
+	padding: 1em;
+	background: white;
+	_display: block;
+	_height: auto;
+	_width: auto;
+}
+
+diyalog::before {
+	content: '';
+	_background: rgba(0, 0, 0, 0.5);
+	position: fixed;
+	display: block;
+	bottom: 0px;
+	right: 0px;
+	left: 0px;
+	top: 0px;
+}
+
+diyalog:not([open]) {
+	display: none;
+}
+
+u.author {
+	_position: relative;
+	cursor: pointer;
 }
 
 .right {
@@ -171,6 +298,16 @@ details {
 	text-align: right;
 }
 
+@supports (-webkit-backdrop-filter: blur(0px)) or (backdrop-filter: blur(0px)) {
+	header, diyalog {
+		background: transparent;
+		backdrop-filter: blur(1em);
+		-webkit-backdrop-filter: blur(1em);
+	}
+}
+
+code#counter       { opacity: 0; }
+code#counter:hover { opacity: 1; }
 
 </style>
 </body>
