@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>SimpleHN</title>
+</head>
+<body>
+	<button onclick="loadPage('main', { type: 'topstories'})" >top </button>
+	<button onclick="loadPage('main', { type: 'askstories'})" >ask </button>
+	<button onclick="loadPage('main', { type: 'jobstories'})" >jobs</button>
+	<input type=checkbox id=comments onchange="loadPage('main', { comments: this.checked })" />
+	<label for=comments >comments?</label>
+	<button onclick="document.querySelectorAll('details').forEach(item => { item.open = true  })" >  expand</button>
+	<button onclick="document.querySelectorAll('details').forEach(item => { item.open = false })" >collapse</button>
+	<!--input type=checkbox id=expanded onchange="loadPage('main', { expanded: this.checked })" /-->
+	<!--input type=checkbox id=expanded onchange="document.querySelectorAll('details').forEach(item => { item.open = this.checked })" / -->
+	<!--label for=expanded >expanded?</label-->
+	<select onchange="loadPage('main', { max: this.value })" >
+		<option>10</option>
+		<option>25</option>
+		<option>50</option>
+		<option>100</option>
+		<option>200</option>
+		<option>500</option>
+		<option>1000</option>
+		<option>-1</option>
+	</select>
+	<button onclick="STORAGE.clear()">clear cache</button>
+	<code id=counter ></code>
+	<main></main>
+<script>
+
+	var STORAGE = localStorage
+	let BASEURL = "https://hacker-news.firebaseio.com/v0"
+
+	function template(json) {
+		let timestamp = new Date(json.time * 1000).toDateString()
+		let comments  = (JSON.parse(STORAGE.COMMENTS) && json.kids) ? (`
+			<details ${JSON.parse(STORAGE.EXPANDED) && "open"} id=${json.id} >
+				<!--summary>loading...</summary-->
+			</details>
+		`) : ""
+		switch(json.type) {
+			case "job":
+				return (`
+					<div class=points >${json.score || 0}</div>
+					<a href="${json.url || "#"}" >${json.title || "{notitle}"}</a>
+					<div class=right >${json.by} / ${timestamp}</div>
+					<div>${json.text || ""}</div>
+					${comments}
+				`)
+				break
+			case "poll":
+				return (`
+					<div>polls are not implemented :)</div>
+				`)
+			case "comment":
+				return (`
+					<div class=right >${json.by} / ${timestamp}</div>
+					<div>${json.text}</div>
+					${comments}
+				`)
+				break
+			case "story":
+				return (`
+					<div class=points >${json.score || 0} / ${json.descendants || 0}</div>
+					<a href="${json.url || "#"}" >${json.title}</a>
+					<div class=right >${json.by} / ${timestamp}</div>
+					${comments}
+				`)
+				break
+			default:
+				break
+		}
+		return (`<div style="background: firebrick; color: white;" >no such template</div>`)
+	}
+
+	function append(elem, json, recursion) {
+		if(!json) return
+		elem.innerHTML += (`<hr /><div class=${json.type} hn=${json.id} >${template(json)}</div>`)
+		json.kids && setTimeout(() => json.kids.forEach((item, index) => loadItem(elem.querySelector(`[hn="${json.id}"] details`), item, recursion)), 10*recursion)
+	}
+
+	function clear(elem) {
+		elem.innerHTML = ""
+		return
+	}
+
+	let counter = [ 0, 0, 0 ]
+
+	function loadItem(elem, item, recursion) {
+		if(!elem) return
+		if(item in STORAGE) {
+			counter[0] += 1
+			return append(elem, JSON.parse(STORAGE[item]), recursion)
+		}
+		counter[1] += 1
+		return fetch(`${BASEURL}/item/${item}.json?print=pretty`)
+			.then(resp => resp.json())
+			.then(json => {
+				setTimeout(() => { STORAGE[item] = JSON.stringify(json) }, 0)
+				append(elem, json, recursion+1)
+				counter[2] += 1
+				return json
+			})
+	}
+
+	function loadList(elem, type, max) {
+		return fetch(`${BASEURL}/${type}.json?print=pretty`)
+			.then(resp => resp.json())
+			.then(json => json.slice(0, max).forEach((item, index) => setTimeout(() => loadItem(elem, item, 0), 0)))
+	}
+
+	function loadPage(elem, options) {
+		if(typeof elem === "string") elem = document.querySelector(elem)
+		if(!options) options = {}
+		let opt = {
+			max:      options.max      || STORAGE.COUNT   || 10,
+			type:     options.type     || STORAGE.SECTION || "topstories",
+			comments: (("comments" in options) ? options.comments : JSON.parse(STORAGE.COMMENTS || "false")),
+			expanded: (("expanded" in options) ? options.expanded : JSON.parse(STORAGE.EXPANDED || "false")),
+		}
+		clear(elem)
+		console.table({ options: options, opt: opt })
+		loadList(elem, opt.type, opt.max)
+		STORAGE.EXPANDED = (opt.expanded)
+		STORAGE.COMMENTS = (opt.comments)
+		STORAGE.SECTION  = (opt.type)
+		STORAGE.COUNT    = (opt.max)
+		return
+	}
+
+	window.onload = function() {
+		if(location.hostname === "localhost") {
+			new WebSocket(`ws://${location.host}`).onmessage = function(msg) {
+				location.reload()
+			}
+		}
+		setInterval((elem) => {
+			elem.innerHTML = (`article stats: hit:${counter[0]} dl:${counter[1]} cached:${counter[2]}`)
+		}, 999, document.querySelector("code#counter"))
+		document.querySelector("select").value = JSON.parse(STORAGE.COUNT || "10")
+		document.querySelector("input[type=checkbox]#comments").checked = JSON.parse(STORAGE.COMMENTS || "false")
+		//document.querySelector("input[type=checkbox]#expanded").checked = JSON.parse(STORAGE.EXPANDED || "false")
+		//STORAGE.SECTION ? loadPage("main") : document.querySelector("button").click()
+		loadPage(document.querySelector("main"))
+	}
+
+</script>
+<style>
+
+a {
+	color: currentColor;
+}
+
+body {
+	font-family: sans-serif;
+}
+
+details {
+	margin-left: 2em;
+}
+
+.right {
+	float: right;
+}
+
+.points {
+	width: 5em;
+	display: inline-block;
+	text-align: right;
+}
+
+
+</style>
+</body>
+</html>
