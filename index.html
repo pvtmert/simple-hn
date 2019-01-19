@@ -120,6 +120,7 @@
 			expanded: (("expanded" in options) ? options.expanded : JSON.parse(STORAGE.EXPANDED || "false")),
 		}
 		clear(elem)
+		counter = [ 0, 0, 0 ]
 		console.table({ options: options, opt: opt })
 		loadList(elem, opt.type, opt.max)
 		STORAGE.EXPANDED = (opt.expanded)
