@@ -25,13 +25,13 @@
 			<option>1000</option>
 			<option>-1</option>
 		</select>
-		<button onclick="STORAGE.clear()">clear cache</button>
+		<button onclick="confirm('are you sure?') && STORAGE.clear()">clear cache</button>
 		<code id=counter ></code>
 	</header>
 	<main></main>
 <script>
 
-	var STORAGE = localStorage
+	var STORAGE = localStorage || sessionStorage || { }
 	let BASEURL = "https://hacker-news.firebaseio.com/v0"
 
 	HTMLElement.prototype.showModal = function() {
@@ -45,15 +45,9 @@
 
 	function template(json) {
 		let timestamp = new Date(json.time * 1000).toDateString()
-		let comments  = (JSON.parse(STORAGE.COMMENTS) && json.kids) ? (`
-			<details ${JSON.parse(STORAGE.EXPANDED) && "open"} id=${json.id} >
-				<summary>Comments</summary>
-			</details>
-		`) : ""
 		let author = (`
 			<u class=author onclick="return loadAuthor(this, '${json.by}', event)"
-				href="https://news.ycombinator.com/user?id=${json.by}">
-				${json.by}<!--summary>${json.by}</summary-->
+				href="https://news.ycombinator.com/user?id=${json.by}">${json.by}
 				<diyalog >loading...</diyalog>
 			</u>
 		`)
@@ -64,7 +58,6 @@
 					<a href="${json.url || "#"}" >${json.title || "{notitle}"}</a>
 					<div class=right >${author} / ${timestamp}</div>
 					<div>${json.text || ""}</div>
-					${comments}
 				`)
 				break
 			case "poll":
@@ -73,9 +66,8 @@
 				`)
 			case "comment":
 				return (`
-					<div class=right >${author} / ${timestamp}</div>
+					<span>${author} / ${timestamp}</span>
 					<div>${json.text}</div>
-					${comments}
 				`)
 				break
 			case "story":
@@ -83,7 +75,6 @@
 					<div class=points >${json.score || 0} / ${json.descendants || 0}</div>
 					<a href="${json.url || "#"}" >${json.title}</a>
 					<div class=right >${author} / ${timestamp}</div>
-					${comments}
 				`)
 				break
 			default:
@@ -94,9 +85,9 @@
 
 	function append(elem, json, recursion) {
 		if(!json) return
-		elem.innerHTML += (`<hr /><div class=${json.type} hn=${json.id} >${template(json)}</div>`)
+		elem.innerHTML += (`<details class=${json.type} hn=${json.id} ><summary>${template(json)}</summary></details>`)
 		json.kids && setTimeout(() => json.kids.forEach((item, index) =>
-			loadItem(elem.querySelector(`[hn="${json.id}"] details`), item, recursion)),
+			loadItem(elem.querySelector(`[hn="${json.id}"]`), item, recursion)),
 		10*recursion)
 	}
 
@@ -198,7 +189,7 @@
 			new WebSocket(`ws://${location.host}`).onmessage = function(msg) {
 				location.reload()
 			}
-			setTimeout(() => document.querySelector("u").click(), 1111)
+			//setTimeout(() => document.querySelector("u").click(), 1111)
 		}
 		setInterval((elem) => {
 			elem.innerHTML = (`article stats: hit:${counter[0]} dl:${counter[1]} cached:${counter[2]}`)
@@ -239,7 +230,7 @@ hr {
 
 details {
 	padding: 0.5em;
-	margin-left: 1.5em;
+	margin-left: 1em;
 }
 
 details[open] {
