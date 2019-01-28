@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>SimpleHN</title>
 </head>
 <body>
@@ -55,8 +57,8 @@
 			case "job":
 				return (`
 					<div class=points >${json.score || 0}</div>
-					<a href="${json.url || "#"}" >${json.title || "{notitle}"}</a>
 					<div class=right >${author} / ${timestamp}</div>
+					<a href="${json.url || "#"}" >${json.title || "{notitle}"}</a>
 					<div>${json.text || ""}</div>
 				`)
 				break
@@ -73,8 +75,8 @@
 			case "story":
 				return (`
 					<div class=points >${json.score || 0} / ${json.descendants || 0}</div>
-					<a href="${json.url || "#"}" >${json.title}</a>
 					<div class=right >${author} / ${timestamp}</div>
+					<a href="${json.url || "#"}" >${json.title}</a>
 				`)
 				break
 			default:
@@ -201,6 +203,10 @@
 		loadPage(document.querySelector("main"))
 	}
 
+	window.onscroll = function() {
+		return
+	}
+
 </script>
 <style>
 
@@ -210,7 +216,7 @@ a {
 
 body {
 	font-family: sans-serif;
-	padding-top: 1em;
+	margin-top: 2em;
 }
 
 header {
@@ -220,6 +226,9 @@ header {
 	padding: 0.5em;
 	position: fixed;
 	background: white;
+	white-space: nowrap;
+	overflow: scroll;
+	height: 22px;
 }
 
 hr {
@@ -294,6 +303,22 @@ u.author {
 		background: transparent;
 		backdrop-filter: blur(1em);
 		-webkit-backdrop-filter: blur(1em);
+	}
+}
+
+@media (max-width: 1024px) {
+	.right {
+		float: none;
+		clear: none;
+		display: inline-block;
+	}
+	details {
+		padding: 8px 0;
+		margin-left: 0.5em;
+	}
+	.points {
+		width: auto;
+		text-align: center;
 	}
 }
 
