@@ -35,7 +35,7 @@
 	<main></main>
 <script>
 
-	var STORAGE = localStorage || sessionStorage || { }
+	var STORAGE = { } //sessionStorage || localStorage || { }
 	let BASEURL = "https://hacker-news.firebaseio.com/v0"
 
 	HTMLElement.prototype.showModal = function() {
@@ -90,9 +90,9 @@
 	function append(elem, json, recursion) {
 		if(!json) return
 		elem.innerHTML += (`<details class=${json.type} hn=${json.id} ><summary>${template(json)}</summary></details>`)
-		json.kids && setTimeout(() => json.kids.forEach((item, index) =>
+		JSON.parse(STORAGE.COMMENTS || "false") && json.kids && setTimeout(() => json.kids.forEach((item, index) =>
 			loadItem(elem.querySelector(`[hn="${json.id}"]`), item, recursion)),
-		10*recursion)
+		1*recursion)
 	}
 
 	function loadAuthor(elem, id, event) {
@@ -161,9 +161,10 @@
 			return append(elem, JSON.parse(STORAGE[item]), recursion)
 		}
 		counter[1] += 1
-		return fetch(`${BASEURL}/item/${item}.json?print=pretty`)
-			.then(resp => resp.json())
-			.then(json => {
+		let url = (`${BASEURL}/item/${item}.json?print=pretty`)
+		return fetch(url, { cache: "force-cache", }).then(resp => {
+				return resp.json()
+			}).then(json => {
 				setTimeout(() => { STORAGE[item] = JSON.stringify(json) }, 0)
 				append(elem, json, recursion+1)
 				counter[2] += 1
@@ -198,6 +199,10 @@
 	}
 
 	window.onload = function() {
+		if(!("data" in localStorage)) { // easy migration from old version
+			localStorage.clear()
+		}
+		Object.assign(STORAGE, JSON.parse("data" in localStorage ? localStorage.data : {}))
 		if(location.hostname === "localhost") {
 			new WebSocket(`ws://${location.host}`).onmessage = function(msg) {
 				location.reload()
@@ -213,6 +218,11 @@
 		//STORAGE.SECTION ? loadPage("main") : document.querySelector("button").click()
 		loadPage(document.querySelector("main"))
 		colorMode(null)
+		return
+	}
+
+	window.onunload = function() {
+		localStorage.data = JSON.stringify(STORAGE)
 		return
 	}
 
@@ -253,11 +263,14 @@ hr {
 details {
 	padding: 0.5em;
 	margin-left: 1em;
-	border-bottom: 1px solid #ddd;
 }
 
 details[open] {
 	border-left: 1px solid #aaa;
+}
+
+main > details {
+	border-bottom: 1px solid #ddd;
 }
 
 diyalog {
