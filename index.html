@@ -12,6 +12,8 @@
 		<button onclick="loadPage('main', { type: 'jobstories'})" >jobs</button>
 		<input type=checkbox id=comments onchange="loadPage('main', { comments: this.checked })" />
 		<label for=comments >comments?</label>
+		<input type=checkbox id=dark onchange="colorMode(this)" />
+		<label for=dark >dark mode?</label>
 		<button onclick="document.querySelectorAll('details').forEach(item => { item.open = true  })" >  expand</button>
 		<button onclick="document.querySelectorAll('details').forEach(item => { item.open = false })" >collapse</button>
 		<!--input type=checkbox id=expanded onchange="loadPage('main', { expanded: this.checked })" /-->
@@ -143,6 +145,15 @@
 
 	let counter = [ 0, 0, 0 ]
 
+	function colorMode(elem, key = "invert") {
+		if(!elem) {
+			elem = document.querySelector("#dark")
+			elem.checked = (STORAGE.DARK && JSON.parse(STORAGE.DARK))
+		}
+		STORAGE.DARK = JSON.stringify(elem.checked)
+		return document.documentElement.classList[elem.checked?"add":"remove"](key)
+	}
+
 	function loadItem(elem, item, recursion) {
 		if(!elem) return
 		if(item in STORAGE) {
@@ -201,6 +212,8 @@
 		//document.querySelector("input[type=checkbox]#expanded").checked = JSON.parse(STORAGE.EXPANDED || "false")
 		//STORAGE.SECTION ? loadPage("main") : document.querySelector("button").click()
 		loadPage(document.querySelector("main"))
+		colorMode(null)
+		return
 	}
 
 	window.onscroll = function() {
@@ -240,6 +253,7 @@ hr {
 details {
 	padding: 0.5em;
 	margin-left: 1em;
+	border-bottom: 1px solid #ddd;
 }
 
 details[open] {
@@ -328,6 +342,8 @@ u.author {
 
 code#counter       { opacity: 0; }
 code#counter:hover { opacity: 1; }
+
+.invert { filter: invert(0.9); }
 
 </style>
 </body>
