@@ -38,10 +38,16 @@
 	var STORAGE = { } //sessionStorage || localStorage || { }
 	let BASEURL = "https://hacker-news.firebaseio.com/v0"
 
-	document.registerElement("usr-diyalog", {
-		prototype: Object.create(HTMLDivElement.prototype),
-		extends: "div",
-	})
+	/*
+	try {
+		document.registerElement("usr-diyalog", {
+			prototype: Object.create(HTMLDivElement.prototype),
+			extends: "div",
+		})
+	} catch(exception) {
+		console.error(exception)
+	}
+	*/
 
 	HTMLElement.prototype.showModal = function() {
 		this.open = true
@@ -255,6 +261,15 @@ body {
 	margin-top: 2em;
 }
 
+input, button {
+	border: 1px solid currentColor;
+	transition: 0.1s;
+}
+input:hover, button:hover {
+	background: #222;
+	color: white;
+}
+
 header {
 	top: 0;
 	left: 0;
@@ -339,6 +354,11 @@ u.author {
 	text-align: right;
 }
 
+:root, html, usr-diyalog { background: white; }
+.invert, .invert usr-diyalog { background: #222; color: white; }
+.invert details { border-color: #444 #777; }
+.invert input:hover, .invert button:hover { background: white; color: #222; }
+
 @supports (-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px)) {
 	header, usr-diyalog {
 		background: transparent;
@@ -369,10 +389,6 @@ u.author {
 
 code#counter       { opacity: 0; }
 code#counter:hover { opacity: 1; }
-
-:root, html, usr-diyalog { background: white; }
-.invert, .invert usr-diyalog { background: #222; color: white; }
-.invert details { border-color: #444 #777; }
 
 </style>
 </body>
