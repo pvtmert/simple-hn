@@ -38,6 +38,11 @@
 	var STORAGE = { } //sessionStorage || localStorage || { }
 	let BASEURL = "https://hacker-news.firebaseio.com/v0"
 
+	document.registerElement("usr-diyalog", {
+		prototype: Object.create(HTMLDivElement.prototype),
+		extends: "div",
+	})
+
 	HTMLElement.prototype.showModal = function() {
 		this.open = true
 		return this.setAttribute("open", "")
@@ -52,7 +57,7 @@
 		let author = (`
 			<u class=author onclick="return loadAuthor(this, '${json.by}', event)"
 				href="https://news.ycombinator.com/user?id=${json.by}">${json.by}
-				<diyalog >loading...</diyalog>
+				<usr-diyalog >loading...</usr-diyalog>
 			</u>
 		`)
 		switch(json.type) {
@@ -97,7 +102,7 @@
 
 	function loadAuthor(elem, id, event) {
 		event.preventDefault()
-		let dialog = elem.querySelector("dialog") || elem.querySelector("details") || elem.querySelector("diyalog")
+		let dialog = elem.querySelector("dialog") || elem.querySelector("details") || elem.querySelector("usr-diyalog")
 		if(!dialog) return
 		if(dialog.open) {
 			dialog.close()
@@ -280,7 +285,7 @@ main > details {
 	border-bottom: 1px solid #ddd;
 }
 
-diyalog {
+usr-diyalog {
 	display: block;
 	position: fixed;
 	top: 0px;
@@ -290,6 +295,7 @@ diyalog {
 	width: -webkit-fit-content;
 	height: -webkit-fit-content;
 	color: currentColor;
+	background: inherit;
 	margin: auto;
 	border-width: initial;
 	border-style: solid;
@@ -301,7 +307,7 @@ diyalog {
 	_width: auto;
 }
 
-diyalog::before {
+usr-diyalog::before {
 	content: '';
 	_background: rgba(0, 0, 0, 0.5);
 	position: fixed;
@@ -312,11 +318,11 @@ diyalog::before {
 	top: 0px;
 }
 
-diyalog:not([open]) {
+usr-diyalog:not([open]) {
 	display: none;
 }
 
-diyalog a { z-index: 99; }
+usr-diyalog a { z-index: 99; }
 
 u.author {
 	_position: relative;
@@ -333,8 +339,8 @@ u.author {
 	text-align: right;
 }
 
-@supports (-webkit-backdrop-filter: blur(0px)) or (backdrop-filter: blur(0px)) {
-	header, diyalog {
+@supports (-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px)) {
+	header, usr-diyalog {
 		background: transparent;
 		backdrop-filter: blur(1em);
 		-webkit-backdrop-filter: blur(1em);
@@ -364,8 +370,8 @@ u.author {
 code#counter       { opacity: 0; }
 code#counter:hover { opacity: 1; }
 
-html { background: white; }
-.invert { background: #222; color: white; }
+:root, html, usr-diyalog { background: white; }
+.invert, .invert usr-diyalog { background: #222; color: white; }
 .invert details { border-color: #444 #777; }
 
 </style>
