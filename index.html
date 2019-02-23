@@ -113,18 +113,21 @@
 					<div>registered:  ${date}</div>
 					<div>${user.about || " "}</div>
 				`)
+				function success(item) {
+					console.log(item)
+					dialog.innerHTML += (`<br /><a target=_blank href="${item[1]}" >${item[0]}: ${id}</a>`)
+					return
+				}
 				Object.entries({
-					github:  `https://github.com/${id}`,
+					github:  `https://api.github.com/users/${id}`,
 					twitter: `https://twitter.com/${id}`,
+					//github:  `https://elektromanye.tk/proxy/github.com/${id}`,
+					//twitter: `https://elektromanye.tk/proxy/twitter.com/${id}`,
 				}).forEach((item, index) => {
-					function success() {
-						dialog.innerHTML += `<br /><a href="${item[1]}" >${item[0]}</a>`
-						return
-					}
-					fetch(item[1], { mode: "no-cors" }).then(resp => {
-						if(resp.ok) return success()
-						throw "lololo"
+					fetch(item[1], { method: "HEAD", mode: "cors" }).then(resp => {
+						if(resp.ok) return success(item)
 					}).catch(error => {
+						console.log(error)
 						let img = document.createElement("img")
 						img.addEventListener("load", success)
 						img.src = (`${item[1]}`)
@@ -310,6 +313,8 @@ diyalog:not([open]) {
 	display: none;
 }
 
+diyalog a { z-index: 99; }
+
 u.author {
 	_position: relative;
 	cursor: pointer;
@@ -356,7 +361,8 @@ u.author {
 code#counter       { opacity: 0; }
 code#counter:hover { opacity: 1; }
 
-.invert { filter: invert(0.9); }
+.invert { background: #222; color: white; }
+.invert details { border-color: #444 #777; }
 
 </style>
 </body>
