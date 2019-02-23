@@ -165,7 +165,7 @@
 		}
 		counter[1] += 1
 		let url = (`${BASEURL}/item/${item}.json?print=pretty`)
-		return fetch(url, { cache: "force-cache", }).then(resp => {
+		return fetch(url, { cache: "default", }).then(resp => {
 				return resp.json()
 			}).then(json => {
 				setTimeout(() => { STORAGE[item] = JSON.stringify(json) }, 0)
@@ -236,6 +236,11 @@
 </script>
 <style>
 
+* {
+	background: inherit;
+	color: currentColor;
+}
+
 a {
 	color: currentColor;
 }
@@ -251,7 +256,6 @@ header {
 	right: 0;
 	padding: 0.5em;
 	position: fixed;
-	background: white;
 	white-space: nowrap;
 	overflow: auto;
 	height: 22px;
@@ -292,7 +296,6 @@ diyalog {
 	border-color: initial;
 	border-image: initial;
 	padding: 1em;
-	_background: white;
 	_display: block;
 	_height: auto;
 	_width: auto;
@@ -361,6 +364,7 @@ u.author {
 code#counter       { opacity: 0; }
 code#counter:hover { opacity: 1; }
 
+html { background: white; }
 .invert { background: #222; color: white; }
 .invert details { border-color: #444 #777; }
 
