@@ -35,7 +35,50 @@
 	<main></main>
 <script>
 
-	var STORAGE = { } //sessionStorage || localStorage || { }
+	var STORAGE = {
+		backend: (localStorage || sessionStorage),
+		extinit: function(parent) {
+			if(!(parent in this.backend)) {
+				this.backend.data = JSON.stringify({})
+			}
+			return
+		},
+		pull: function(parent, key) {
+			this.extinit(parent)
+			return JSON.parse(this.backend[parent])
+		},
+		push: function(parent, data) {
+			this.extinit(parent)
+			this.backend[parent] = JSON.stringify(data)
+			return this.backend[parent].length
+		},
+		init: function(version) {
+			let backend = this.pull("data") || this.backend
+			if(!this.has("VER") || this.get("VER") !== version) {
+				this.clear()
+			}
+			return this.set("VER", version)
+		},
+		get: function(key, initial) {
+			let backend = this.pull("data") || this.backend
+			if(key in backend) {
+				return JSON.parse(backend[key])
+			}
+			return initial
+		},
+		set: function(key, value) {
+			let backend = this.pull("data") || this.backend
+			backend[key] = JSON.stringify(value)
+			return this.push("data", backend) || backend[key]
+		},
+		has: function(key) {
+			let backend = this.pull("data") || this.backend
+			return (key in backend)
+		},
+		clear: function() {
+			return this.backend.clear()
+		},
+	}
 	let BASEURL = "https://hacker-news.firebaseio.com/v0"
 
 	/*
@@ -101,9 +144,9 @@
 	function append(elem, json, recursion) {
 		if(!json) return
 		elem.innerHTML += (`<details class=${json.type} hn=${json.id} ><summary>${template(json)}</summary></details>`)
-		JSON.parse(STORAGE.COMMENTS || "false") && json.kids && setTimeout(() => json.kids.forEach((item, index) =>
+		STORAGE.get("COMMENTS", false) && json.kids && setTimeout(() => json.kids.forEach((item, index) =>
 			loadItem(elem.querySelector(`[hn="${json.id}"]`), item, recursion)),
-		1*recursion)
+		10*recursion)
 	}
 
 	function loadAuthor(elem, id, event) {
@@ -162,24 +205,24 @@
 	function colorMode(elem, key = "invert") {
 		if(!elem) {
 			elem = document.querySelector("#dark")
-			elem.checked = (STORAGE.DARK && JSON.parse(STORAGE.DARK))
+			elem.checked = STORAGE.get("DARK", false)
 		}
-		STORAGE.DARK = JSON.stringify(elem.checked)
+		STORAGE.set("DARK", elem.checked)
 		return document.documentElement.classList[elem.checked?"add":"remove"](key)
 	}
 
 	function loadItem(elem, item, recursion) {
 		if(!elem) return
-		if(item in STORAGE) {
+		if(STORAGE.has(item)) {
 			counter[0] += 1
-			return append(elem, JSON.parse(STORAGE[item]), recursion)
+			return append(elem, STORAGE.get(item), recursion)
 		}
 		counter[1] += 1
 		let url = (`${BASEURL}/item/${item}.json?print=pretty`)
 		return fetch(url, { cache: "default", }).then(resp => {
 				return resp.json()
 			}).then(json => {
-				setTimeout(() => { STORAGE[item] = JSON.stringify(json) }, 0)
+				setTimeout(() => { STORAGE.set(item, json) }, 0)
 				append(elem, json, recursion+1)
 				counter[2] += 1
 				return json
@@ -196,27 +239,25 @@
 		if(typeof elem === "string") elem = document.querySelector(elem)
 		if(!options) options = {}
 		let opt = {
-			max:      options.max      || STORAGE.COUNT   || 10,
-			type:     options.type     || STORAGE.SECTION || "topstories",
-			comments: (("comments" in options) ? options.comments : JSON.parse(STORAGE.COMMENTS || "false")),
-			expanded: (("expanded" in options) ? options.expanded : JSON.parse(STORAGE.EXPANDED || "false")),
+			max:      options.max      || STORAGE.get("COUNT", 10),
+			type:     options.type     || STORAGE.get("SECTION", "topstories"),
+			comments: (("comments" in options) ? options.comments : STORAGE.get("COMMENTS", false)),
+			expanded: (("expanded" in options) ? options.expanded : STORAGE.get("EXPANDED", false)),
 		}
 		clear(elem)
 		counter = [ 0, 0, 0 ]
 		console.table({ options: options, opt: opt })
 		loadList(elem, opt.type, opt.max)
-		STORAGE.EXPANDED = (opt.expanded)
-		STORAGE.COMMENTS = (opt.comments)
-		STORAGE.SECTION  = (opt.type)
-		STORAGE.COUNT    = (opt.max)
+		STORAGE.set("EXPANDED", opt.expanded)
+		STORAGE.set("COMMENTS", opt.comments)
+		STORAGE.set("SECTION",  opt.type)
+		STORAGE.set("COUNT",    opt.max)
 		return
 	}
 
 	window.onload = function() {
-		if(!("data" in localStorage)) { // easy migration from old version
-			localStorage.clear()
-		}
-		Object.assign(STORAGE, JSON.parse("data" in localStorage ? localStorage.data : {}))
+		STORAGE.init("1.0")
+		//Object.assign(STORAGE, JSON.parse("data" in localStorage ? localStorage.data : {}))
 		if(location.hostname === "localhost") {
 			new WebSocket(`ws://${location.host}`).onmessage = function(msg) {
 				location.reload()
@@ -226,8 +267,8 @@
 		setInterval((elem) => {
 			elem.innerHTML = (`article stats: hit:${counter[0]} dl:${counter[1]} cached:${counter[2]}`)
 		}, 999, document.querySelector("code#counter"))
-		document.querySelector("select").value = JSON.parse(STORAGE.COUNT || "10")
-		document.querySelector("input[type=checkbox]#comments").checked = JSON.parse(STORAGE.COMMENTS || "false")
+		document.querySelector("select").value = STORAGE.get("COUNT", 10)
+		document.querySelector("input[type=checkbox]#comments").checked = STORAGE.get("COMMENTS", false)
 		//document.querySelector("input[type=checkbox]#expanded").checked = JSON.parse(STORAGE.EXPANDED || "false")
 		//STORAGE.SECTION ? loadPage("main") : document.querySelector("button").click()
 		loadPage(document.querySelector("main"))
@@ -236,7 +277,7 @@
 	}
 
 	window.onunload = function() {
-		localStorage.data = JSON.stringify(STORAGE)
+		//localStorage.data = JSON.stringify(STORAGE)
 		return
 	}
 
