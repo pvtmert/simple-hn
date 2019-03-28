@@ -109,7 +109,11 @@
 		},
 		// refactor from here:
 		has: function(key) {
-			return (key in this.mCache || key in JSON.parse(this.pull("data")))
+			try {
+				return (key in this.mCache || key in JSON.parse(this.pull("data")))
+			} catch(exception) {
+				return null
+			}
 		},
 		get: function(key, initial) {
 			return (
