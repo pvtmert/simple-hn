@@ -37,11 +37,21 @@
 
 	var STORAGE = {
 		last: null,
-		backend: (localStorage || sessionStorage),
+		mCache: {},
+		backend: (localStorage || sessionStorage || {}),
 		extinit: function(parent) {
 			if(!(parent in this.backend)) {
 				this.backend.data = JSON.stringify({})
+			} else {
+				this.mCache = {
+					...this.mCache,
+					...JSON.parse(this.backend.data),
+				}
 			}
+			return
+		},
+		commit: function(parent) {
+			this.backend[parent] = JSON.stringify(this.mCache)
 			return
 		},
 		pull: function(parent, key) {
@@ -50,12 +60,24 @@
 		},
 		push: function(parent, data) {
 			this.extinit(parent)
-			if(this.last) clearTimeout(this.last)
-			let timer = setTimeout(function() {
-				self.backend[parent] = JSON.stringify(data)
+			if(this.last) {
+				clearTimeout(this.last)
+			}
+			let timer = setTimeout(function(self) {
+				try {
+					self.commit(parent)
+				} catch(exception) {
+					console.error(exception)
+					let keys = Object.keys(data).sort()
+					for(let i=0; i<keys.length/3; i++) {
+						delete data[keys[i]]
+						continue;
+					}
+					return self.push(parent, data)
+				}
 				self.last = null
 				return
-			}, 9999)
+			}, 999, this)
 			this.last = timer
 			return this.backend[parent].length
 		},
@@ -67,23 +89,44 @@
 			return this.set("VER", version)
 		},
 		get: function(key, initial) {
-			let backend = this.pull("data") || this.backend
+			let backend = this.mCache || this.pull("data") || this.backend
 			if(key in backend) {
 				return JSON.parse(backend[key])
 			}
 			return initial
 		},
 		set: function(key, value) {
-			let backend = this.pull("data") || this.backend
+			let backend = this.mCache || this.pull("data") || this.backend
 			backend[key] = JSON.stringify(value)
 			return this.push("data", backend) || backend[key]
 		},
 		has: function(key) {
-			let backend = this.pull("data") || this.backend
+			let backend = this.mCache || this.pull("data") || this.backend
 			return (key in backend)
 		},
 		clear: function() {
 			return this.backend.clear()
+		},
+		// refactor from here:
+		has: function(key) {
+			return (key in this.mCache || key in JSON.parse(this.pull("data")))
+		},
+		get: function(key, initial) {
+			return (
+				(key in this.mCache && this.mCache[key])
+				||
+				(key in this.pull("data") && JSON.parse(this.pull("data")[key]))
+			)
+		},
+		set: function(key, value) {
+			if(this.last) {
+				clearTimeout(this.last)
+			}
+			this.mCache[key] = value
+			this.last = setTimeout(function(self, parent) {
+				return self.commit(parent)
+			}, 999, this, "data")
+			return Object.keys(this.mCache).length
 		},
 	}
 	let BASEURL = "https://hacker-news.firebaseio.com/v0"
@@ -229,7 +272,7 @@
 		return fetch(url, { cache: "default", }).then(resp => {
 				return resp.json()
 			}).then(json => {
-				setTimeout(() => { STORAGE.set(item, json) }, 0)
+				setTimeout(STORAGE.set, 0, item, json)
 				append(elem, json, recursion+1)
 				counter[2] += 1
 				return json
