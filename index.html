@@ -108,29 +108,34 @@
 			return this.backend.clear()
 		},
 		// refactor from here:
+		commit: function(parent) {
+			STORAGE.backend[parent] = JSON.stringify(STORAGE.mCache)
+			return
+		},
 		has: function(key) {
 			try {
-				return (key in this.mCache || key in JSON.parse(this.pull("data")))
+				return (key in STORAGE.mCache || key in (STORAGE.pull("data")))
 			} catch(exception) {
+				console.error(exception)
 				return null
 			}
 		},
 		get: function(key, initial) {
 			return (
-				(key in this.mCache && this.mCache[key])
+				(key in STORAGE.mCache && STORAGE.mCache[key])
 				||
-				(key in this.pull("data") && JSON.parse(this.pull("data")[key]))
+				(key in STORAGE.pull("data") && (STORAGE.pull("data")[key]))
+				||
+				initial
 			)
 		},
 		set: function(key, value) {
-			if(this.last) {
-				clearTimeout(this.last)
+			if(STORAGE.last) {
+				clearTimeout(STORAGE.last)
 			}
-			this.mCache[key] = value
-			this.last = setTimeout(function(self, parent) {
-				return self.commit(parent)
-			}, 999, this, "data")
-			return Object.keys(this.mCache).length
+			STORAGE.mCache[key] = value
+			STORAGE.last = setTimeout(STORAGE.commit, 99, "data")
+			return Object.keys(STORAGE.mCache).length
 		},
 	}
 	let BASEURL = "https://hacker-news.firebaseio.com/v0"
@@ -286,7 +291,7 @@
 	function loadList(elem, type, max) {
 		return fetch(`${BASEURL}/${type}.json?print=pretty`)
 			.then(resp => resp.json())
-			.then(json => json.slice(0, max).forEach((item, index) => setTimeout(() => loadItem(elem, item, 0), 0)))
+			.then(json => json.slice(0, max).forEach((item, index) => setTimeout(loadItem, 0, elem, item, 0)))
 	}
 
 	function loadPage(elem, options) {
@@ -301,16 +306,16 @@
 		clear(elem)
 		counter = [ 0, 0, 0 ]
 		console.table({ options: options, opt: opt })
-		loadList(elem, opt.type, opt.max)
 		STORAGE.set("EXPANDED", opt.expanded)
 		STORAGE.set("COMMENTS", opt.comments)
 		STORAGE.set("SECTION",  opt.type)
 		STORAGE.set("COUNT",    opt.max)
+		loadList(elem, opt.type, opt.max)
 		return
 	}
 
 	window.onload = function() {
-		STORAGE.init("1.0.1")
+		STORAGE.init("1.0.2")
 		//Object.assign(STORAGE, JSON.parse("data" in localStorage ? localStorage.data : {}))
 		if(location.hostname === "localhost") {
 			new WebSocket(`ws://${location.host}`).onmessage = function(msg) {
