@@ -109,7 +109,19 @@
 		},
 		// refactor from here:
 		commit: function(parent) {
-			STORAGE.backend[parent] = JSON.stringify(STORAGE.mCache)
+			try {
+				STORAGE.backend[parent] = JSON.stringify(STORAGE.mCache)
+			} catch(exception) {
+				console.error(exception)
+				let keys = Object.keys(STORAGE.mCache).sort()
+				let count = keys.length/3;
+				console.log("deleting:". keys.slice(0, count))
+				for(let i=0; i<count; i++) {
+					delete STORAGE.mCache[keys[i]]
+					continue;
+				}
+				return STORAGE.commit(parent)
+			}
 			return
 		},
 		has: function(key) {
