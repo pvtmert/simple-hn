@@ -306,7 +306,7 @@
 	}
 
 	window.onload = function() {
-		STORAGE.init("1.0")
+		STORAGE.init("1.0.1")
 		//Object.assign(STORAGE, JSON.parse("data" in localStorage ? localStorage.data : {}))
 		if(location.hostname === "localhost") {
 			new WebSocket(`ws://${location.host}`).onmessage = function(msg) {
