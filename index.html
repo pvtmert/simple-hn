@@ -36,6 +36,7 @@
 <script>
 
 	var STORAGE = {
+		last: null,
 		backend: (localStorage || sessionStorage),
 		extinit: function(parent) {
 			if(!(parent in this.backend)) {
@@ -49,7 +50,13 @@
 		},
 		push: function(parent, data) {
 			this.extinit(parent)
-			this.backend[parent] = JSON.stringify(data)
+			if(this.last) clearTimeout(this.last)
+			let timer = setTimeout(function() {
+				self.backend[parent] = JSON.stringify(data)
+				self.last = null
+				return
+			}, 9999)
+			this.last = timer
 			return this.backend[parent].length
 		},
 		init: function(version) {
@@ -124,7 +131,7 @@
 				`)
 			case "comment":
 				return (`
-					<span>${author} / ${timestamp}</span>
+					<span>${author} / ${timestamp} / (${json.score || 0}/${json.descendants || 0})</span>
 					<div>${json.text}</div>
 				`)
 				break
