@@ -146,7 +146,7 @@
 				clearTimeout(STORAGE.last)
 			}
 			STORAGE.mCache[key] = value
-			STORAGE.last = setTimeout(STORAGE.commit, 99, "data")
+			STORAGE.last = setTimeout(STORAGE.commit, 999, "data")
 			return Object.keys(STORAGE.mCache).length
 		},
 	}
@@ -366,10 +366,12 @@
 
 a {
 	color: currentColor;
+	text-decoration: none;
+	font-weight: bold;
 }
 
 body {
-	font-family: sans-serif;
+	font-family: Inconsolata, sans-serif;
 	margin-top: 2em;
 }
 
